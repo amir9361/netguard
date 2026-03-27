@@ -17,15 +17,7 @@ services:
       - SCAN_INTERVAL=30
     volumes:
       - netguard_data:/data
-    command:
-      - bash
-      - -c
-      - >-
-        apt-get update -qq &&
-        apt-get install -y -qq libpcap-dev gcc curl &&
-        pip install -q flask flask-cors scapy &&
-        curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/app.py -o /app.py &&
-        python /app.py
+    command: ["bash", "-c", "apt-get update -qq && apt-get install -y -qq libpcap-dev gcc curl && pip install -q flask flask-cors scapy && curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/app.py -o /app.py && python /app.py"]
 
   netguard-ui:
     image: nginx:alpine
@@ -33,15 +25,7 @@ services:
     restart: unless-stopped
     ports:
       - "8080:80"
-    command:
-      - sh
-      - -c
-      - >-
-        apk add --no-cache curl &&
-        mkdir -p /usr/share/nginx/html &&
-        curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/index.html
-        -o /usr/share/nginx/html/index.html &&
-        nginx -g 'daemon off;'
+    command: ["sh", "-c", "apk add --no-cache curl && curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/index.html -o /usr/share/nginx/html/index.html && nginx -g 'daemon off;'"]
 
 volumes:
   netguard_data:
