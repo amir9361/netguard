@@ -6,423 +6,197 @@
 <title>NetGuard – ניהול רשת</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Heebo:wght@300;400;700;900&display=swap" rel="stylesheet"/>
 <style>
-  :root {
-    --bg:       #0a0c0f;
-    --surface:  #111418;
-    --border:   #1e2530;
-    --accent:   #00e5ff;
-    --danger:   #ff3b5c;
-    --warn:     #ffb800;
-    --ok:       #00e676;
-    --muted:    #4a5568;
-    --text:     #c9d1d9;
-    --text-dim: #6b7280;
-  }
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Heebo', sans-serif;
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
+:root{--bg:#0a0c0f;--surface:#111418;--border:#1e2530;--accent:#00e5ff;--danger:#ff3b5c;--warn:#ffb800;--ok:#00e676;--muted:#4a5568;--text:#c9d1d9;--text-dim:#6b7280}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Heebo',sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+header{position:sticky;top:0;z-index:100;background:rgba(10,12,15,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 28px;height:60px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:1.1rem;color:var(--accent);letter-spacing:2px;display:flex;align-items:center;gap:10px}
+.logo-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.header-stats{display:flex;gap:24px;align-items:center}
+.stat-chip{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--text-dim);display:flex;align-items:center;gap:6px}
+.stat-chip span{color:var(--text);font-weight:600}
+.stat-chip.danger span{color:var(--danger)}
+.stat-chip.ok span{color:var(--ok)}
+main{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:28px 20px}
+.toolbar{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.search-box{flex:1;min-width:200px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:9px 14px;color:var(--text);font-family:'Heebo',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+.search-box:focus{border-color:var(--accent)}
+.search-box::placeholder{color:var(--text-dim)}
+.filter-tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:4px}
+.filter-tab{padding:5px 14px;border-radius:4px;border:none;background:transparent;color:var(--text-dim);font-family:'Heebo',sans-serif;font-size:.82rem;cursor:pointer;transition:all .15s}
+.filter-tab.active{background:var(--border);color:var(--text)}
+.btn{display:flex;align-items:center;gap:6px;padding:9px 18px;border-radius:6px;border:none;font-family:'Heebo',sans-serif;font-size:.85rem;cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn-scan{background:rgba(0,229,255,.1);color:var(--accent);border:1px solid rgba(0,229,255,.25)}
+.btn-scan:hover{background:rgba(0,229,255,.2)}
+.device-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:14px}
+.device-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 20px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s,transform .15s;animation:fadeIn .3s ease both;position:relative;overflow:hidden}
+.device-card::before{content:'';position:absolute;top:0;right:0;width:3px;height:100%;transition:background .2s}
+.device-card.online::before{background:var(--ok)}
+.device-card.offline::before{background:var(--muted)}
+.device-card.blocked::before{background:var(--danger);box-shadow:0 0 12px var(--danger)}
+.device-card:hover{border-color:#2e3d50;transform:translateY(-1px)}
+.device-card.blocked{border-color:rgba(255,59,92,.2)}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.device-icon{width:38px;height:38px;border-radius:8px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0}
+.device-name-wrap{flex:1;min-width:0}
+.device-name{font-weight:700;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.device-name.unnamed{color:var(--text-dim);font-style:italic}
+.device-vendor{font-size:.72rem;color:var(--text-dim);margin-top:2px}
+.status-badge{font-family:'IBM Plex Mono',monospace;font-size:.65rem;padding:3px 8px;border-radius:20px;font-weight:600;letter-spacing:.5px;flex-shrink:0}
+.badge-online{background:rgba(0,230,118,.12);color:var(--ok)}
+.badge-offline{background:rgba(74,85,104,.2);color:var(--muted)}
+.badge-blocked{background:rgba(255,59,92,.12);color:var(--danger)}
 
-  /* grid bg */
-  body::before {
-    content: '';
-    position: fixed; inset: 0;
-    background-image:
-      linear-gradient(rgba(0,229,255,.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,229,255,.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    pointer-events: none;
-    z-index: 0;
-  }
+/* info grid */
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px 14px}
+.info-item{font-size:.73rem;color:var(--text-dim)}
+.info-item strong{font-family:'IBM Plex Mono',monospace;color:var(--text);font-size:.7rem;display:block;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-  /* ── header ── */
-  header {
-    position: sticky; top: 0; z-index: 100;
-    background: rgba(10,12,15,.92);
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--border);
-    padding: 0 28px;
-    height: 60px;
-    display: flex; align-items: center; justify-content: space-between;
-  }
-  .logo {
-    font-family: 'IBM Plex Mono', monospace;
-    font-weight: 600; font-size: 1.1rem;
-    color: var(--accent);
-    letter-spacing: 2px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .logo-dot { width: 8px; height: 8px; background: var(--accent); border-radius: 50%;
-    box-shadow: 0 0 10px var(--accent); animation: pulse 2s infinite; }
-  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+/* tags row */
+.tags-row{display:flex;flex-wrap:wrap;gap:5px}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:.62rem;padding:2px 7px;border-radius:4px;background:rgba(0,229,255,.07);color:var(--accent);border:1px solid rgba(0,229,255,.15)}
+.tag.os-tag{background:rgba(255,184,0,.07);color:var(--warn);border-color:rgba(255,184,0,.2)}
+.tag.port-tag{background:rgba(0,230,118,.06);color:var(--ok);border-color:rgba(0,230,118,.15)}
+.tag.android-tag{background:rgba(61,220,132,.1);color:#3ddc84;border-color:rgba(61,220,132,.25)}
+.tag.banner-tag{background:rgba(160,120,255,.08);color:#a078ff;border-color:rgba(160,120,255,.2)}
+.tag.rand-mac{background:rgba(255,59,92,.07);color:var(--danger);border-color:rgba(255,59,92,.2)}
 
-  .header-stats {
-    display: flex; gap: 24px; align-items: center;
-  }
-  .stat-chip {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .7rem; color: var(--text-dim);
-    display: flex; align-items: center; gap: 6px;
-  }
-  .stat-chip span { color: var(--text); font-weight: 600; }
-  .stat-chip.danger span { color: var(--danger); }
-  .stat-chip.ok span { color: var(--ok); }
-
-  /* ── main layout ── */
-  main {
-    position: relative; z-index: 1;
-    max-width: 1200px; margin: 0 auto;
-    padding: 28px 20px;
-  }
-
-  /* ── toolbar ── */
-  .toolbar {
-    display: flex; align-items: center; gap: 12px;
-    margin-bottom: 24px; flex-wrap: wrap;
-  }
-  .search-box {
-    flex: 1; min-width: 200px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 9px 14px;
-    color: var(--text); font-family: 'Heebo', sans-serif; font-size: .9rem;
-    outline: none; transition: border-color .2s;
-  }
-  .search-box:focus { border-color: var(--accent); }
-  .search-box::placeholder { color: var(--text-dim); }
-
-  .filter-tabs {
-    display: flex; gap: 4px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; padding: 4px;
-  }
-  .filter-tab {
-    padding: 5px 14px; border-radius: 4px; border: none;
-    background: transparent; color: var(--text-dim);
-    font-family: 'Heebo', sans-serif; font-size: .82rem; cursor: pointer;
-    transition: all .15s;
-  }
-  .filter-tab.active { background: var(--border); color: var(--text); }
-
-  .btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 9px 18px; border-radius: 6px; border: none;
-    font-family: 'Heebo', sans-serif; font-size: .85rem;
-    cursor: pointer; transition: all .15s; white-space: nowrap;
-  }
-  .btn-scan {
-    background: rgba(0,229,255,.1); color: var(--accent);
-    border: 1px solid rgba(0,229,255,.25);
-  }
-  .btn-scan:hover { background: rgba(0,229,255,.2); }
-  .btn-scan.scanning { opacity: .6; cursor: not-allowed; }
-
-  /* ── device grid ── */
-  .device-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-    gap: 14px;
-  }
-
-  .device-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 18px 20px;
-    display: flex; flex-direction: column; gap: 12px;
-    transition: border-color .2s, transform .15s;
-    animation: fadeIn .3s ease both;
-    position: relative; overflow: hidden;
-  }
-  .device-card::before {
-    content: '';
-    position: absolute; top: 0; right: 0;
-    width: 3px; height: 100%;
-    border-radius: 10px 0 0 10px;
-    transition: background .2s;
-  }
-  .device-card.online::before  { background: var(--ok); }
-  .device-card.offline::before { background: var(--muted); }
-  .device-card.blocked::before { background: var(--danger);
-    box-shadow: 0 0 12px var(--danger); }
-  .device-card:hover { border-color: #2e3d50; transform: translateY(-1px); }
-  .device-card.blocked { border-color: rgba(255,59,92,.2); }
-
-  @keyframes fadeIn { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:none } }
-
-  /* card header */
-  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-  .device-icon {
-    width: 36px; height: 36px; border-radius: 8px;
-    background: var(--border);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.2rem; flex-shrink: 0;
-  }
-  .device-name-wrap { flex: 1; min-width: 0; }
-  .device-name {
-    font-weight: 700; font-size: .95rem;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .device-name.unnamed { color: var(--text-dim); font-style: italic; }
-  .device-vendor { font-size: .72rem; color: var(--text-dim); margin-top: 2px; }
-
-  .status-badge {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: .65rem; padding: 3px 8px; border-radius: 20px;
-    font-weight: 600; letter-spacing: .5px; flex-shrink: 0;
-  }
-  .badge-online  { background: rgba(0,230,118,.12); color: var(--ok); }
-  .badge-offline { background: rgba(74,85,104,.2);  color: var(--muted); }
-  .badge-blocked { background: rgba(255,59,92,.12); color: var(--danger); }
-
-  /* card meta */
-  .card-meta {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 6px 14px;
-  }
-  .meta-item { font-size: .75rem; color: var(--text-dim); }
-  .meta-item strong {
-    font-family: 'IBM Plex Mono', monospace;
-    color: var(--text); font-size: .72rem; display: block; margin-top: 2px;
-  }
-
-  /* card actions */
-  .card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
-  .act-btn {
-    flex: 1; min-width: 80px;
-    padding: 7px 10px; border-radius: 6px; border: none;
-    font-family: 'Heebo', sans-serif; font-size: .78rem; font-weight: 600;
-    cursor: pointer; transition: all .15s; text-align: center;
-  }
-  .act-trust {
-    background: rgba(0,230,118,.1); color: var(--ok);
-    border: 1px solid rgba(0,230,118,.2);
-  }
-  .act-trust:hover { background: rgba(0,230,118,.2); }
-  .act-trust.active {
-    background: rgba(0,230,118,.2); color: var(--ok);
-  }
-  .act-block {
-    background: rgba(255,59,92,.1); color: var(--danger);
-    border: 1px solid rgba(255,59,92,.2);
-  }
-  .act-block:hover  { background: rgba(255,59,92,.2); }
-  .act-block.active { background: rgba(255,59,92,.25); }
-  .act-rename {
-    background: rgba(255,184,0,.08); color: var(--warn);
-    border: 1px solid rgba(255,184,0,.2);
-  }
-  .act-rename:hover { background: rgba(255,184,0,.15); }
-
-  /* rename input */
-  .rename-row {
-    display: flex; gap: 8px; margin-top: -4px;
-  }
-  .rename-input {
-    flex: 1; background: var(--bg); border: 1px solid var(--accent);
-    border-radius: 6px; padding: 6px 10px; color: var(--text);
-    font-family: 'Heebo', sans-serif; font-size: .82rem; outline: none;
-  }
-  .rename-save {
-    padding: 6px 14px; background: var(--accent); color: var(--bg);
-    border: none; border-radius: 6px; font-weight: 700; cursor: pointer;
-    font-size: .82rem;
-  }
-
-  /* trust ring */
-  .device-card.trusted .device-icon {
-    box-shadow: 0 0 0 2px rgba(0,230,118,.4);
-  }
-
-  /* empty */
-  .empty {
-    grid-column: 1/-1;
-    text-align: center; padding: 80px 20px; color: var(--text-dim);
-    font-family: 'IBM Plex Mono', monospace;
-  }
-
-  /* section title */
-  .section-title {
-    font-size: .7rem; font-family: 'IBM Plex Mono', monospace;
-    color: var(--text-dim); letter-spacing: 2px; text-transform: uppercase;
-    margin-bottom: 16px;
-    display: flex; align-items: center; gap: 10px;
-  }
-  .section-title::after {
-    content: ''; flex: 1; height: 1px; background: var(--border);
-  }
-
-  /* toast */
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--surface); border: 1px solid var(--border);
-    padding: 10px 22px; border-radius: 8px;
-    font-size: .82rem; font-family: 'IBM Plex Mono', monospace;
-    z-index: 999; opacity: 0; transition: opacity .2s;
-    pointer-events: none;
-  }
-  .toast.show { opacity: 1; }
-  .toast.ok   { border-color: var(--ok); color: var(--ok); }
-  .toast.err  { border-color: var(--danger); color: var(--danger); }
-
-  /* loading spinner */
-  .spin {
-    width: 14px; height: 14px; border-radius: 50%;
-    border: 2px solid rgba(0,229,255,.2);
-    border-top-color: var(--accent);
-    animation: spin .6s linear infinite; display: inline-block;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* API url bar */
-  .api-bar {
-    background: rgba(0,229,255,.04); border: 1px dashed rgba(0,229,255,.15);
-    border-radius: 8px; padding: 10px 16px; margin-bottom: 22px;
-    font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--text-dim);
-    display: flex; align-items: center; gap: 10px;
-  }
-  .api-bar input {
-    flex: 1; background: transparent; border: none; outline: none;
-    color: var(--accent); font-family: inherit; font-size: inherit;
-  }
-  .api-save { padding: 4px 12px; background: var(--border); border: none;
-    border-radius: 4px; color: var(--text); font-size: .7rem; cursor: pointer; }
+/* actions */
+.card-actions{display:flex;gap:8px;flex-wrap:wrap}
+.act-btn{flex:1;min-width:80px;padding:7px 10px;border-radius:6px;border:none;font-family:'Heebo',sans-serif;font-size:.78rem;font-weight:600;cursor:pointer;transition:all .15s;text-align:center}
+.act-trust{background:rgba(0,230,118,.1);color:var(--ok);border:1px solid rgba(0,230,118,.2)}
+.act-trust:hover{background:rgba(0,230,118,.2)}
+.act-trust.active{background:rgba(0,230,118,.2)}
+.act-block{background:rgba(255,59,92,.1);color:var(--danger);border:1px solid rgba(255,59,92,.2)}
+.act-block:hover{background:rgba(255,59,92,.2)}
+.act-block.active{background:rgba(255,59,92,.25)}
+.act-rename{background:rgba(255,184,0,.08);color:var(--warn);border:1px solid rgba(255,184,0,.2)}
+.act-rename:hover{background:rgba(255,184,0,.15)}
+.act-deepscan{background:rgba(0,229,255,.07);color:var(--accent);border:1px solid rgba(0,229,255,.18)}
+.act-deepscan:hover{background:rgba(0,229,255,.15)}
+.rename-row{display:flex;gap:8px}
+.rename-input{flex:1;background:var(--bg);border:1px solid var(--accent);border-radius:6px;padding:6px 10px;color:var(--text);font-family:'Heebo',sans-serif;font-size:.82rem;outline:none}
+.rename-save{padding:6px 14px;background:var(--accent);color:var(--bg);border:none;border-radius:6px;font-weight:700;cursor:pointer;font-size:.82rem}
+.device-card.trusted .device-icon{box-shadow:0 0 0 2px rgba(0,230,118,.4)}
+.empty{grid-column:1/-1;text-align:center;padding:80px 20px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace}
+.section-title{font-size:.7rem;font-family:'IBM Plex Mono',monospace;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:16px;display:flex;align-items:center;gap:10px}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);padding:10px 22px;border-radius:8px;font-size:.82rem;font-family:'IBM Plex Mono',monospace;z-index:999;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.ok{border-color:var(--ok);color:var(--ok)}
+.toast.err{border-color:var(--danger);color:var(--danger)}
+.api-bar{background:rgba(0,229,255,.04);border:1px dashed rgba(0,229,255,.15);border-radius:8px;padding:10px 16px;margin-bottom:22px;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--text-dim);display:flex;align-items:center;gap:10px}
+.api-bar input{flex:1;background:transparent;border:none;outline:none;color:var(--accent);font-family:inherit;font-size:inherit}
+.api-save{padding:4px 12px;background:var(--border);border:none;border-radius:4px;color:var(--text);font-size:.7rem;cursor:pointer}
+.divider{height:1px;background:var(--border);margin:2px 0}
 </style>
 </head>
 <body>
-
 <header>
-  <div class="logo">
-    <div class="logo-dot"></div>
-    NETGUARD
-  </div>
+  <div class="logo"><div class="logo-dot"></div>NETGUARD</div>
   <div class="header-stats">
     <div class="stat-chip ok"><span id="hOnline">0</span> מחוברים</div>
     <div class="stat-chip"><span id="hTotal">0</span> סה״כ</div>
     <div class="stat-chip danger"><span id="hBlocked">0</span> חסומים</div>
   </div>
 </header>
-
 <main>
-  <!-- API config -->
   <div class="api-bar">
     <span>⚙ API:</span>
-    <input id="apiUrl" value="http://localhost:5000" placeholder="http://YOUR_SERVER_IP:5000"/>
+    <input id="apiUrl" placeholder="http://192.168.1.104:5000"/>
     <button class="api-save" onclick="saveApi()">שמור</button>
   </div>
-
   <div class="section-title">מכשירי הרשת</div>
-
   <div class="toolbar">
-    <input class="search-box" id="search" placeholder="חיפוש לפי שם, IP, MAC…" oninput="render()"/>
+    <input class="search-box" id="search" placeholder="חיפוש לפי שם, IP, MAC, OS…" oninput="render()"/>
     <div class="filter-tabs">
-      <button class="filter-tab active" data-f="all"    onclick="setFilter('all',this)">הכל</button>
-      <button class="filter-tab"        data-f="online" onclick="setFilter('online',this)">מחוברים</button>
-      <button class="filter-tab"        data-f="unknown"onclick="setFilter('unknown',this)">לא מוכרים</button>
-      <button class="filter-tab"        data-f="blocked"onclick="setFilter('blocked',this)">חסומים</button>
+      <button class="filter-tab active" onclick="setFilter('all',this)">הכל</button>
+      <button class="filter-tab" onclick="setFilter('online',this)">מחוברים</button>
+      <button class="filter-tab" onclick="setFilter('android',this)">אנדרואיד</button>
+      <button class="filter-tab" onclick="setFilter('unknown',this)">לא מוכרים</button>
+      <button class="filter-tab" onclick="setFilter('blocked',this)">חסומים</button>
     </div>
-    <button class="btn btn-scan" id="scanBtn" onclick="doScan()">
-      <span id="scanIcon">⟳</span> סריקה
-    </button>
+    <button class="btn btn-scan" id="scanBtn" onclick="doScan()">⟳ סריקה</button>
   </div>
-
   <div class="device-grid" id="grid"></div>
 </main>
-
 <div class="toast" id="toast"></div>
 
 <script>
-const DEVICE_ICONS = {
-  apple:'🍎', google:'📡', raspberry:'🍓', tp:'📶',
-  cisco:'🔧', vmware:'🖥', virtual:'🖥', default:'📱'
-};
-
-let API = localStorage.getItem('ng_api') || 'http://localhost:5000';
+let API = localStorage.getItem('ng_api') || '';
+let allDevices = [], filter = 'all', renaming = null;
 document.getElementById('apiUrl').value = API;
 
-let allDevices = [];
-let filter = 'all';
-let renaming = null;
-
 function saveApi() {
-  API = document.getElementById('apiUrl').value.replace(/\/$/, '');
+  API = document.getElementById('apiUrl').value.replace(/\/$/,'');
   localStorage.setItem('ng_api', API);
-  toast('API שמור', 'ok');
+  toast('API שמור','ok');
   loadDevices();
 }
 
-async function apiFetch(path, opts = {}) {
-  const r = await fetch(API + path, {
-    headers: {'Content-Type':'application/json'},
-    ...opts
-  });
+async function apiFetch(p, o={}) {
+  const r = await fetch(API+p, {headers:{'Content-Type':'application/json'}, ...o});
   if (!r.ok) throw new Error(await r.text());
   return r.json();
 }
 
 async function loadDevices() {
+  if (!API) return;
   try {
     allDevices = await apiFetch('/api/devices');
-    const status = await apiFetch('/api/status');
-    document.getElementById('hOnline').textContent  = status.online  || 0;
-    document.getElementById('hTotal').textContent   = status.total   || 0;
-    document.getElementById('hBlocked').textContent = status.blocked || 0;
+    const s = await apiFetch('/api/status');
+    document.getElementById('hOnline').textContent  = s.online  || 0;
+    document.getElementById('hTotal').textContent   = s.total   || 0;
+    document.getElementById('hBlocked').textContent = s.blocked || 0;
     render();
-  } catch(e) {
-    toast('לא ניתן להתחבר ל-API – בדוק כתובת', 'err');
-  }
+  } catch(e) { toast('לא ניתן להתחבר – בדוק כתובת API','err'); }
 }
 
 async function doScan() {
   const btn = document.getElementById('scanBtn');
-  btn.classList.add('scanning');
-  document.getElementById('scanIcon').outerHTML = '<span id="scanIcon" class="spin"></span>';
+  btn.textContent = '…'; btn.style.opacity = '.5';
   try {
     await apiFetch('/api/scan', {method:'POST'});
     await loadDevices();
-    toast('סריקה הושלמה', 'ok');
-  } catch(e) {
-    toast('שגיאה בסריקה', 'err');
-  } finally {
-    btn.classList.remove('scanning');
-    document.getElementById('scanIcon').outerHTML = '<span id="scanIcon">⟳</span>';
-  }
+    toast('סריקה הושלמה','ok');
+  } catch(e) { toast('שגיאה בסריקה','err'); }
+  finally { btn.textContent = '⟳ סריקה'; btn.style.opacity = '1'; }
 }
 
-async function toggleBlock(mac, currently) {
+async function toggleBlock(mac, cur) {
   try {
-    await apiFetch(`/api/devices/${mac}/block`, {
-      method:'POST', body: JSON.stringify({block: !currently})
-    });
-    toast(currently ? 'חסימה הוסרה' : 'מכשיר נחסם', currently ? 'ok' : 'err');
+    await apiFetch('/api/devices/'+mac+'/block', {method:'POST', body:JSON.stringify({block:!cur})});
+    toast(cur?'חסימה הוסרה':'מכשיר נחסם', cur?'ok':'err');
     loadDevices();
-  } catch(e) { toast('שגיאה', 'err'); }
+  } catch(e) { toast('שגיאה','err'); }
 }
 
-async function toggleTrust(mac, currently) {
+async function toggleTrust(mac, cur) {
   try {
-    await apiFetch(`/api/devices/${mac}/trust`, {
-      method:'POST', body: JSON.stringify({trusted: !currently})
-    });
-    toast(currently ? 'הסרת אמון' : 'מכשיר מהימן ✓', 'ok');
+    await apiFetch('/api/devices/'+mac+'/trust', {method:'POST', body:JSON.stringify({trusted:!cur})});
+    toast(cur?'הסרת אמון':'מכשיר מהימן ✓','ok');
     loadDevices();
-  } catch(e) { toast('שגיאה', 'err'); }
+  } catch(e) { toast('שגיאה','err'); }
 }
 
 async function saveRename(mac) {
-  const val = document.getElementById('ri_'+mac)?.value?.trim();
-  if (val === undefined) return;
+  const v = document.getElementById('ri_'+mac)?.value?.trim();
+  if (v === undefined) return;
   try {
-    await apiFetch(`/api/devices/${mac}/name`, {
-      method:'POST', body: JSON.stringify({name: val})
-    });
-    renaming = null;
-    loadDevices();
-  } catch(e) { toast('שגיאה', 'err'); }
+    await apiFetch('/api/devices/'+mac+'/name', {method:'POST', body:JSON.stringify({name:v})});
+    renaming = null; loadDevices();
+  } catch(e) { toast('שגיאה','err'); }
+}
+
+async function deepScan(mac) {
+  try {
+    await apiFetch('/api/devices/'+mac+'/deepscan', {method:'POST'});
+    toast('סריקה מעמיקה החלה…','ok');
+    setTimeout(loadDevices, 20000);
+  } catch(e) { toast('שגיאה','err'); }
 }
 
 function setFilter(f, el) {
@@ -432,38 +206,56 @@ function setFilter(f, el) {
   render();
 }
 
-function deviceIcon(vendor = '') {
-  const v = vendor.toLowerCase();
-  if (v.includes('apple'))     return DEVICE_ICONS.apple;
-  if (v.includes('google'))    return DEVICE_ICONS.google;
-  if (v.includes('raspberry')) return DEVICE_ICONS.raspberry;
-  if (v.includes('tp-link'))   return DEVICE_ICONS.tp;
-  if (v.includes('cisco'))     return DEVICE_ICONS.cisco;
-  if (v.includes('vmware') || v.includes('virtual')) return DEVICE_ICONS.vmware;
-  return DEVICE_ICONS.default;
+function deviceIcon(d) {
+  const dt = (d.device_type || '').toLowerCase();
+  const v  = (d.vendor || '').toLowerCase();
+  if (dt.includes('android') || dt.includes('mobile')) return '📱';
+  if (dt.includes('ps5') || dt.includes('playstation')) return '🎮';
+  if (dt.includes('windows')) return '💻';
+  if (dt.includes('linux') || dt.includes('raspberry')) return '🐧';
+  if (dt.includes('mac') || dt.includes('apple') || v.includes('apple')) return '🍎';
+  if (dt.includes('router') || v.includes('tp-link') || v.includes('cisco')) return '📡';
+  if (v.includes('samsung')) return '📱';
+  if (v.includes('raspberry')) return '🍓';
+  if (v.includes('google')) return '🔵';
+  return '📟';
 }
 
-function timeSince(iso) {
+function isRandMac(mac) {
+  try { return !!(parseInt(mac.split(':')[0],16) & 0x02); } catch(e) { return false; }
+}
+
+function ago(iso) {
   if (!iso) return '—';
-  const diff = Math.floor((Date.now() - new Date(iso+'Z')) / 1000);
-  if (diff < 60)   return 'עכשיו';
-  if (diff < 3600) return `לפני ${Math.floor(diff/60)}ד'`;
-  if (diff < 86400)return `לפני ${Math.floor(diff/3600)}ש'`;
-  return `לפני ${Math.floor(diff/86400)} ימים`;
+  const d = Math.floor((Date.now() - new Date(iso+'Z')) / 1000);
+  if (d < 60)    return 'עכשיו';
+  if (d < 3600)  return 'לפני '+Math.floor(d/60)+"ד'";
+  if (d < 86400) return 'לפני '+Math.floor(d/3600)+"ש'";
+  return 'לפני '+Math.floor(d/86400)+' ימים';
 }
 
 function render() {
   const q = document.getElementById('search').value.toLowerCase();
   let devs = allDevices.filter(d => {
-    const match = !q || (d.name||'').toLowerCase().includes(q) ||
-      (d.ip||'').includes(q) || (d.mac||'').includes(q) ||
-      (d.vendor||'').toLowerCase().includes(q);
-    if (!match) return false;
+    const m = !q ||
+      (d.name||'').toLowerCase().includes(q) ||
+      (d.ip||'').includes(q) ||
+      (d.mac||'').includes(q) ||
+      (d.vendor||'').toLowerCase().includes(q) ||
+      (d.os||'').toLowerCase().includes(q) ||
+      (d.device_type||'').toLowerCase().includes(q) ||
+      (d.http_banner||'').toLowerCase().includes(q) ||
+      (d.hostname||'').toLowerCase().includes(q);
+    if (!m) return false;
     if (filter === 'online')  return d.online;
     if (filter === 'unknown') return !d.trusted;
     if (filter === 'blocked') return d.blocked;
+    if (filter === 'android') return (d.device_type||'').toLowerCase().includes('android') ||
+                                      (d.android_score||0) >= 30;
     return true;
   });
+
+  devs.sort((a,b) => (b.blocked-a.blocked)||(b.online-a.online));
 
   const grid = document.getElementById('grid');
   if (!devs.length) {
@@ -471,42 +263,49 @@ function render() {
     return;
   }
 
-  // sort: blocked first, then online, then offline
-  devs.sort((a,b) => {
-    if (a.blocked !== b.blocked) return b.blocked - a.blocked;
-    if (a.online  !== b.online)  return b.online  - a.online;
-    return 0;
-  });
-
   grid.innerHTML = devs.map(d => {
-    const isBlocked = !!d.blocked;
-    const isTrusted = !!d.trusted;
-    const isOnline  = !!d.online;
-    const statusClass = isBlocked ? 'blocked' : isOnline ? 'online' : 'offline';
-    const badgeClass  = isBlocked ? 'badge-blocked' : isOnline ? 'badge-online' : 'badge-offline';
-    const badgeText   = isBlocked ? '⛔ חסום' : isOnline ? '● מחובר' : '○ לא מחובר';
-    const displayName = d.name || d.vendor || d.mac;
-    const isRenaming  = renaming === d.mac;
+    const bl = !!d.blocked, tr = !!d.trusted, on = !!d.online;
+    const sc = bl?'blocked':on?'online':'offline';
+    const bc = bl?'badge-blocked':on?'badge-online':'badge-offline';
+    const bt = bl?'⛔ חסום':on?'● מחובר':'○ לא מחובר';
+    const dn = d.name || d.mdns_name || d.hostname || d.vendor || d.mac;
+    const ir = renaming === d.mac;
+    const randMac = isRandMac(d.mac);
+
+    // build tags
+    const tags = [];
+    if (d.device_type) tags.push(`<span class="tag android-tag">${d.device_type}</span>`);
+    if (d.os)          tags.push(`<span class="tag os-tag">🖥 ${d.os.substring(0,40)}</span>`);
+    if (d.http_banner) tags.push(`<span class="tag banner-tag">🌐 ${d.http_banner.substring(0,30)}</span>`);
+    if (randMac)       tags.push(`<span class="tag rand-mac">⚠ MAC אקראי</span>`);
+    if ((d.open_ports||[]).length) {
+      d.open_ports.slice(0,4).forEach(p => tags.push(`<span class="tag port-tag">${p}</span>`));
+    }
+    if ((d.android_score||0) >= 30 && !d.device_type) {
+      tags.push(`<span class="tag android-tag">📱 Android? (${d.android_score})</span>`);
+    }
 
     return `
-    <div class="device-card ${statusClass} ${isTrusted?'trusted':''}">
+    <div class="device-card ${sc}${tr?' trusted':''}${bl?' blocked':''}">
       <div class="card-head">
-        <div class="device-icon">${deviceIcon(d.vendor)}</div>
+        <div class="device-icon">${deviceIcon(d)}</div>
         <div class="device-name-wrap">
-          <div class="device-name ${!d.name?'unnamed':''}">${displayName}</div>
-          <div class="device-vendor">${d.vendor || 'ספק לא ידוע'}</div>
+          <div class="device-name${!d.name&&!d.mdns_name?' unnamed':''}">${dn}</div>
+          <div class="device-vendor">${d.vendor||'ספק לא ידוע'}</div>
         </div>
-        <div class="status-badge ${badgeClass}">${badgeText}</div>
+        <div class="status-badge ${bc}">${bt}</div>
       </div>
 
-      <div class="card-meta">
-        <div class="meta-item">כתובת IP<strong>${d.ip || '—'}</strong></div>
-        <div class="meta-item">MAC<strong style="font-size:.65rem">${d.mac}</strong></div>
-        <div class="meta-item">נראה לאחרונה<strong>${timeSince(d.last_seen)}</strong></div>
-        <div class="meta-item">נראה לראשונה<strong>${timeSince(d.first_seen)}</strong></div>
+      <div class="info-grid">
+        <div class="info-item">IP<strong>${d.ip||'—'}</strong></div>
+        <div class="info-item">MAC<strong style="font-size:.63rem">${d.mac}</strong></div>
+        <div class="info-item">hostname<strong>${d.hostname||d.mdns_name||'—'}</strong></div>
+        <div class="info-item">נראה<strong>${ago(d.last_seen)}</strong></div>
       </div>
 
-      ${isRenaming ? `
+      ${tags.length ? `<div class="divider"></div><div class="tags-row">${tags.join('')}</div>` : ''}
+
+      ${ir ? `
       <div class="rename-row">
         <input class="rename-input" id="ri_${d.mac}" value="${d.name||''}" placeholder="שם המכשיר…"
           onkeydown="if(event.key==='Enter')saveRename('${d.mac}')"/>
@@ -514,31 +313,29 @@ function render() {
       </div>` : ''}
 
       <div class="card-actions">
-        <button class="act-btn act-trust ${isTrusted?'active':''}"
-          onclick="toggleTrust('${d.mac}',${isTrusted})">
-          ${isTrusted ? '✓ מהימן' : '+ אמון'}
+        <button class="act-btn act-trust${tr?' active':''}" onclick="toggleTrust('${d.mac}',${tr})">
+          ${tr?'✓ מהימן':'+ אמון'}
         </button>
-        <button class="act-btn act-rename"
-          onclick="renaming='${renaming===d.mac?null:d.mac}';render()">
+        <button class="act-btn act-rename" onclick="renaming='${renaming===d.mac?null:d.mac}';render()">
           ✎ שם
         </button>
-        <button class="act-btn act-block ${isBlocked?'active':''}"
-          onclick="toggleBlock('${d.mac}',${isBlocked})">
-          ${isBlocked ? '✗ בטל חסימה' : '⛔ חסום'}
+        <button class="act-btn act-deepscan" onclick="deepScan('${d.mac}')">
+          🔍 סריקה
+        </button>
+        <button class="act-btn act-block${bl?' active':''}" onclick="toggleBlock('${d.mac}',${bl})">
+          ${bl?'✗ בטל':'⛔ חסום'}
         </button>
       </div>
     </div>`;
   }).join('');
 }
 
-function toast(msg, type='ok') {
+function toast(m,t='ok') {
   const el = document.getElementById('toast');
-  el.textContent = msg;
-  el.className = `toast show ${type}`;
-  setTimeout(() => el.classList.remove('show'), 2500);
+  el.textContent = m; el.className = 'toast show '+t;
+  setTimeout(()=>el.classList.remove('show'), 2500);
 }
 
-// init
 loadDevices();
 setInterval(loadDevices, 30000);
 </script>
