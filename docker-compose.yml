@@ -2,32 +2,47 @@ version: "3.9"
 
 services:
 
-  # ─── Backend – network scanner + ARP blocker ───
   netguard-api:
-    build: ./backend
+    image: python:3.12-slim
     container_name: netguard-api
     restart: unless-stopped
-    network_mode: host          # must be host to see LAN traffic
+    network_mode: host
     cap_add:
       - NET_ADMIN
       - NET_RAW
     environment:
-      GATEWAY_IP:    "${GATEWAY_IP:-192.168.1.1}"
-      SUBNET:        "${SUBNET:-192.168.1.0/24}"
-      IFACE:         "${IFACE:-eth0}"
-      SCAN_INTERVAL: "${SCAN_INTERVAL:-30}"
+      - GATEWAY_IP=192.168.1.1
+      - SUBNET=192.168.1.0/24
+      - IFACE=eth0
+      - SCAN_INTERVAL=30
     volumes:
       - netguard_data:/data
+    command:
+      - bash
+      - -c
+      - >-
+        apt-get update -qq &&
+        apt-get install -y -qq libpcap-dev gcc curl &&
+        pip install -q flask flask-cors scapy &&
+        curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/app.py -o /app.py &&
+        python /app.py
 
-  # ─── Frontend – web UI served by nginx ───
   netguard-ui:
     image: nginx:alpine
     container_name: netguard-ui
     restart: unless-stopped
     ports:
-      - "8080:80"               # http://YOUR_IP:8080
+      - "8080:80"
     volumes:
-      - ./frontend:/usr/share/nginx/html:ro
+      - netguard_html:/usr/share/nginx/html
+    command:
+      - sh
+      - -c
+      - >-
+        curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/index.html
+        -o /usr/share/nginx/html/index.html &&
+        nginx -g 'daemon off;'
 
 volumes:
   netguard_data:
+  netguard_html:
