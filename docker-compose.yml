@@ -33,16 +33,15 @@ services:
     restart: unless-stopped
     ports:
       - "8080:80"
-    volumes:
-      - netguard_html:/usr/share/nginx/html
     command:
       - sh
       - -c
       - >-
+        apk add --no-cache curl &&
+        mkdir -p /usr/share/nginx/html &&
         curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/index.html
         -o /usr/share/nginx/html/index.html &&
         nginx -g 'daemon off;'
 
 volumes:
   netguard_data:
-  netguard_html:
