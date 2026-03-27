@@ -1,0 +1,33 @@
+version: "3.9"
+
+services:
+
+  # ─── Backend – network scanner + ARP blocker ───
+  netguard-api:
+    build: ./backend
+    container_name: netguard-api
+    restart: unless-stopped
+    network_mode: host          # must be host to see LAN traffic
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      GATEWAY_IP:    "${GATEWAY_IP:-192.168.1.1}"
+      SUBNET:        "${SUBNET:-192.168.1.0/24}"
+      IFACE:         "${IFACE:-eth0}"
+      SCAN_INTERVAL: "${SCAN_INTERVAL:-30}"
+    volumes:
+      - netguard_data:/data
+
+  # ─── Frontend – web UI served by nginx ───
+  netguard-ui:
+    image: nginx:alpine
+    container_name: netguard-ui
+    restart: unless-stopped
+    ports:
+      - "8080:80"               # http://YOUR_IP:8080
+    volumes:
+      - ./frontend:/usr/share/nginx/html:ro
+
+volumes:
+  netguard_data:
