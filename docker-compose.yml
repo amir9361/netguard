@@ -15,7 +15,7 @@ services:
     environment:
       - GATEWAY_IP=192.168.1.1
       - SUBNET=192.168.1.0/24
-      - IFACE=eth0
+      - IFACE=wlan0
       - SCAN_INTERVAL=30
     volumes:
       - netguard_data:/data
