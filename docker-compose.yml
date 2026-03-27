@@ -7,6 +7,8 @@ services:
     container_name: netguard-api
     restart: unless-stopped
     network_mode: host
+    privileged: true
+    pid: host
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -17,7 +19,7 @@ services:
       - SCAN_INTERVAL=30
     volumes:
       - netguard_data:/data
-    command: ["bash", "-c", "apt-get update -qq && apt-get install -y -qq libpcap-dev gcc curl && pip install -q flask flask-cors scapy && curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/app.py -o /app.py && python /app.py"]
+    command: ["bash", "-c", "apt-get update -qq && apt-get install -y -qq libpcap-dev gcc curl iproute2 && pip install -q flask flask-cors scapy && curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/app.py -o /app.py && python /app.py"]
 
   netguard-ui:
     image: nginx:alpine
