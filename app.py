@@ -5,6 +5,7 @@ NetGuard – Enhanced Device Detection
 - mDNS/Bonjour hostname resolution
 - nmap OS + port fingerprinting
 - HTTP banner grabbing
+- Android detection (TTL, ADB port, SSDP, randomized MAC detection)
 """
 
 import os, json, time, threading, logging, socket, subprocess, requests
@@ -155,6 +156,142 @@ def grab_http_banner(ip: str) -> str:
     return ""
 
 
+# ── Android detection ────────────────────────────────────────────
+def is_randomized_mac(mac: str) -> bool:
+    """Locally administered MACs (bit 1 of first octet) are randomized."""
+    try:
+        first_byte = int(mac.split(":")[0], 16)
+        return bool(first_byte & 0x02)
+    except Exception:
+        return False
+
+def get_ttl(ip: str) -> int:
+    """Ping and extract TTL from response."""
+    try:
+        out = subprocess.check_output(
+            ["ping", "-c", "1", "-W", "1", ip],
+            timeout=3, stderr=subprocess.DEVNULL, text=True
+        )
+        for token in out.split():
+            if token.startswith("ttl=") or token.startswith("TTL="):
+                return int(token.split("=")[1])
+    except Exception:
+        pass
+    return 0
+
+def check_android_ports(ip: str) -> dict:
+    """Check ports typical to Android devices."""
+    results = {}
+    ports_to_check = {
+        5555: "ADB (Android Debug Bridge)",
+        8080: "HTTP proxy",
+        554:  "RTSP (camera/media)",
+        7000: "AirPlay mirror",
+        49152: "Android Cast",
+    }
+    for port, desc in ports_to_check.items():
+        try:
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            s.settimeout(0.5)
+            if s.connect_ex((ip, port)) == 0:
+                results[port] = desc
+            s.close()
+        except Exception:
+            pass
+    return results
+
+def check_ssdp(ip: str) -> str:
+    """Send SSDP M-SEARCH and look for Android/Google in response."""
+    msg = (
+        "M-SEARCH * HTTP/1.1\r\n"
+        f"HOST: {ip}:1900\r\n"
+        "MAN: \"ssdp:discover\"\r\n"
+        "MX: 1\r\n"
+        "ST: ssdp:all\r\n\r\n"
+    ).encode()
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.settimeout(2)
+        s.sendto(msg, (ip, 1900))
+        data, _ = s.recvfrom(1024)
+        response = data.decode(errors="ignore")
+        s.close()
+        # look for Android/Google identifiers
+        for keyword in ["Android", "android", "Google", "Nexus", "Pixel"]:
+            if keyword in response:
+                return response
+    except Exception:
+        pass
+    return ""
+
+def detect_android(ip: str, mac: str, vendor: str) -> dict:
+    """
+    Combine multiple signals to detect Android devices.
+    Returns dict with device_type and confidence score.
+    """
+    score = 0
+    signals = []
+
+    # 1. Randomized MAC (strong signal for modern Android)
+    if is_randomized_mac(mac):
+        score += 30
+        signals.append("randomized MAC")
+
+    # 2. TTL = 64 (Android/Linux default, vs 128 for Windows)
+    ttl = get_ttl(ip)
+    if ttl in range(60, 70):
+        score += 20
+        signals.append(f"TTL={ttl}")
+    elif ttl in range(125, 135):
+        # Windows — subtract Android score
+        score -= 40
+        signals.append(f"TTL={ttl} (Windows)")
+
+    # 3. Vendor hints
+    android_vendors = ["samsung", "xiaomi", "huawei", "oppo", "vivo",
+                       "oneplus", "motorola", "lg electronics", "sony mobile",
+                       "realme", "nothing technology", "google"]
+    if any(v in vendor.lower() for v in android_vendors):
+        score += 40
+        signals.append(f"vendor={vendor}")
+
+    # 4. Open Android ports
+    android_ports = check_android_ports(ip)
+    if 5555 in android_ports:
+        score += 50
+        signals.append("ADB port open")
+    if android_ports:
+        score += 10 * len(android_ports)
+        signals.append(f"ports={list(android_ports.keys())}")
+
+    # 5. SSDP response with Android signature
+    ssdp = check_ssdp(ip)
+    if ssdp:
+        score += 40
+        signals.append("SSDP Android response")
+
+    # 6. HTTP banner check for Android-specific web UIs
+    for port in [8008, 8009, 9080]:
+        try:
+            r = requests.get(f"http://{ip}:{port}", timeout=1, verify=False)
+            if any(k in r.text for k in ["Android", "Chromecast", "Google Cast"]):
+                score += 35
+                signals.append(f"Android web UI on :{port}")
+                break
+        except Exception:
+            pass
+
+    result = {"android_score": score, "android_signals": signals}
+
+    if score >= 50:
+        result["device_type"] = "📱 Android"
+        log.info(f"Android detected {ip} (score={score}): {', '.join(signals)}")
+    elif score >= 30:
+        result["device_type"] = "📱 Mobile (likely Android)"
+
+    return result
+
+
 # ── nmap fingerprint ─────────────────────────────────────────────
 def nmap_scan(ip: str) -> dict:
     result = {"os": "", "ports": [], "device_type": ""}
@@ -208,7 +345,7 @@ def nmap_scan(ip: str) -> dict:
 
 # ── deep scan (runs in background per device) ────────────────────
 def deep_scan_device(mac: str, ip: str):
-    """Run nmap + HTTP banner in background for a single device."""
+    """Run nmap + HTTP banner + Android detection in background."""
     log.info(f"Deep scan: {ip}")
     updates = {}
 
@@ -219,21 +356,33 @@ def deep_scan_device(mac: str, ip: str):
         if not devices.get(mac, {}).get("name"):
             updates["mdns_name"] = hn
 
+    # Android detection (runs first — fast signals like TTL/ports)
+    vendor = devices.get(mac, {}).get("vendor", "")
+    android = detect_android(ip, mac, vendor)
+    updates.update(android)
+
     # HTTP banner
     banner = grab_http_banner(ip)
     if banner:
         updates["http_banner"] = banner
         log.info(f"HTTP banner {ip}: {banner}")
+        # if banner hints Android, boost
+        if any(k in banner.lower() for k in ["android", "chromecast", "google"]):
+            updates["device_type"] = "📱 Android"
 
-    # nmap
-    nm = nmap_scan(ip)
-    if nm["os"]:
-        updates["os"] = nm["os"]
-        log.info(f"nmap OS {ip}: {nm['os']}")
-    if nm["ports"]:
-        updates["open_ports"] = nm["ports"]
-    if nm["device_type"]:
-        updates["device_type"] = nm["device_type"]
+    # nmap (only if Android not already confirmed)
+    if updates.get("android_score", 0) < 50:
+        nm = nmap_scan(ip)
+        if nm["os"]:
+            updates["os"] = nm["os"]
+            log.info(f"nmap OS {ip}: {nm['os']}")
+            # nmap OS override if Android found in string
+            if "android" in nm["os"].lower():
+                updates["device_type"] = "📱 Android"
+        if nm["ports"]:
+            updates["open_ports"] = nm["ports"]
+        if nm["device_type"] and not updates.get("device_type"):
+            updates["device_type"] = nm["device_type"]
 
     if updates and mac in devices:
         devices[mac].update(updates)
