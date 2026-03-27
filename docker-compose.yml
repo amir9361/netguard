@@ -16,10 +16,10 @@ services:
       - GATEWAY_IP=192.168.1.1
       - SUBNET=192.168.1.0/24
       - IFACE=wlan0
-      - SCAN_INTERVAL=30
+      - SCAN_INTERVAL=45
     volumes:
       - netguard_data:/data
-    command: ["bash", "-c", "apt-get update -qq && apt-get install -y -qq libpcap-dev gcc curl iproute2 && pip install -q flask flask-cors scapy && curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/app.py -o /app.py && python /app.py"]
+    command: ["bash", "-c", "apt-get update -qq && apt-get install -y -qq libpcap-dev gcc curl nmap && pip install -q flask flask-cors scapy requests zeroconf && curl -fsSL https://raw.githubusercontent.com/amir9361/netguard/main/app.py -o /app.py && python /app.py"]
 
   netguard-ui:
     image: nginx:alpine
